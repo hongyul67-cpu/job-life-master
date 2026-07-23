@@ -94,6 +94,15 @@ table.lt th{background:#122448;color:var(--cy);font-weight:900;padding:8px 9px;b
 table.lt td{padding:8px 9px;border:1px solid var(--line2);color:var(--tx);vertical-align:top}
 table.lt td b{color:#fff}
 .stage .body{flex:1}
+details.more{margin-top:12px;background:#0a1730;border:1px dashed #33507f;border-radius:12px;overflow:hidden}
+details.more>summary{list-style:none;cursor:pointer;padding:11px 13px;font-size:13.5px;font-weight:900;
+  color:var(--am);display:flex;align-items:center;gap:6px;user-select:none}
+details.more>summary::-webkit-details-marker{display:none}
+details.more>summary:after{content:"펼치기 ▾";margin-left:auto;font-size:11px;color:var(--tx3);font-weight:800}
+details.more[open]>summary:after{content:"접기 ▴"}
+details.more[open]>summary{border-bottom:1px dashed #33507f}
+.more-body{padding:12px 13px 4px}
+.more-body .pts li{background:#0c1c38}
 .pager{display:flex;align-items:center;gap:8px;margin-top:16px}
 .dots{flex:1;display:flex;gap:5px;flex-wrap:wrap}
 .dots i{width:8px;height:8px;border-radius:99px;background:var(--line);display:block}
@@ -313,6 +322,19 @@ function startLearn(id){
   setCrumb("📖",t.title,"배우기 · "+u.no+"단원");
   renderLearn();
 }
+function blockHTML(c){
+  var out='';
+  if(c.table){
+    out+='<table class="lt"><tr>'+c.table.head.map(function(x){return '<th>'+x+'</th>';}).join('')+'</tr>';
+    c.table.rows.forEach(function(r){ out+='<tr>'+r.map(function(x){return '<td>'+x+'</td>';}).join('')+'</tr>'; });
+    out+='</table>';
+  }
+  if(c.pts && c.pts.length){
+    out+='<ul class="pts"'+(c.table?' style="margin-top:10px"':'')+'>'+
+         c.pts.map(function(p){return '<li>'+p+'</li>';}).join('')+'</ul>';
+  }
+  return out;
+}
 function renderLearn(){
   var s=LrnState, t=s.t, u=s.u; s.seen[s.i]=true;
   var body='';
@@ -324,14 +346,10 @@ function renderLearn(){
   } else {
     var c=t.learn[s.i-1];
     body='<div class="learn-card"><div class="kick">개념 '+s.i+' / '+t.learn.length+'</div><h3>'+c.h+'</h3>';
-    if(c.pts && c.pts.length && !c.table){
-      body+='<ul class="pts">'+c.pts.map(function(p){return '<li>'+p+'</li>';}).join('')+'</ul>';
-    }
-    if(c.table){
-      body+='<table class="lt"><tr>'+c.table.head.map(function(x){return '<th>'+x+'</th>';}).join('')+'</tr>';
-      c.table.rows.forEach(function(r){ body+='<tr>'+r.map(function(x){return '<td>'+x+'</td>';}).join('')+'</tr>'; });
-      body+='</table>';
-      if(c.pts && c.pts.length){ body+='<ul class="pts" style="margin-top:10px">'+c.pts.map(function(p){return '<li>'+p+'</li>';}).join('')+'</ul>'; }
+    body+=blockHTML(c);
+    if(c.more){
+      body+='<details class="more"><summary>🔎 더 알아보기'+(c.more.title?' — '+c.more.title:'')+
+            '</summary><div class="more-body">'+blockHTML(c.more)+'</div></details>';
     }
     body+='</div>';
   }
