@@ -1,0 +1,342 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>성공적인 직업생활 · 전자칠판 수업자료</title>
+<script src="lesson.js"></script>
+<style>
+:root{
+  --bg:#070d1c; --panel:#121c30; --panel2:#182643; --line:#2c3f66;
+  --ink:#eef3fb; --dim:#9db0d6; --si:#7cc6ff; --si2:#3b9bff;
+  --good:#37d68f; --gold:#ffd166; --bad:#ff5f6d;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none}
+html,body{margin:0;height:100%;overflow:hidden;overscroll-behavior:none}
+body{font-family:"Pretendard","Malgun Gothic","맑은 고딕",system-ui,sans-serif;
+  background:radial-gradient(1400px 800px at 50% -15%,#16294d 0%,var(--bg) 62%) fixed;color:var(--ink)}
+button{font-family:inherit;cursor:pointer;border:none;color:inherit}
+.hidden{display:none!important}
+
+/* ═══ 메뉴(홈) ═══ */
+#menu{position:fixed;inset:0;overflow-y:auto;padding:min(4vh,36px) min(4vw,40px)}
+.mtop{text-align:center;margin-bottom:min(3.4vh,30px)}
+.mtop h1{font-size:clamp(26px,3.4vw,50px);font-weight:900;margin:0 0 8px;letter-spacing:-1px}
+.mtop p{font-size:clamp(14px,1.35vw,21px);color:var(--dim);margin:0;font-weight:700}
+.ugrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:min(2vh,18px);max-width:1500px;margin:0 auto}
+.ucard{display:flex;align-items:center;gap:18px;background:var(--panel);border:2px solid var(--line);
+  border-radius:20px;padding:min(2.4vh,22px) min(2vw,24px);text-align:left;transition:.15s}
+.ucard:hover{border-color:var(--si);background:var(--panel2);transform:translateY(-3px)}
+.ucard .ic{font-size:clamp(34px,3.4vw,52px);flex-shrink:0}
+.ucard .m{flex:1;min-width:0}
+.ucard .no{font-size:clamp(12px,1vw,16px);color:var(--si);font-weight:900;letter-spacing:.5px}
+.ucard .ti{font-size:clamp(19px,1.9vw,30px);font-weight:900;margin-top:2px;line-height:1.2}
+.ucard .cnt{font-size:clamp(12px,1.05vw,17px);color:var(--dim);font-weight:800;margin-top:4px}
+.mhelp{max-width:1500px;margin:min(3.4vh,30px) auto 0;background:var(--panel);border:1px dashed var(--line);
+  border-radius:16px;padding:min(2.2vh,20px) min(2vw,24px);color:var(--dim);
+  font-size:clamp(12.5px,1.15vw,18px);line-height:1.85;font-weight:700}
+.mhelp b{color:var(--gold)}
+.key{display:inline-block;background:var(--panel2);border:1px solid var(--line);border-radius:7px;
+  padding:1px 9px;color:var(--ink);font-weight:900;margin:0 2px}
+
+/* ═══ 무대 ═══ */
+#stage{position:fixed;inset:0;display:flex;flex-direction:column}
+#head{display:flex;align-items:center;gap:16px;padding:min(1.6vh,15px) min(2.2vw,28px);
+  border-bottom:2px solid var(--line);background:#0a1223;flex-shrink:0}
+#hUnit{font-size:clamp(12px,1.05vw,17px);color:var(--si);font-weight:900;white-space:nowrap}
+#hTitle{font-size:clamp(20px,2.5vw,42px);font-weight:900;letter-spacing:-.7px;flex:1;line-height:1.2}
+#hIdx{font-size:clamp(14px,1.25vw,23px);color:var(--dim);font-weight:900;white-space:nowrap}
+
+#content{flex:1;position:relative;overflow:hidden;
+  padding:min(2vh,20px) min(2.4vw,32px) calc(var(--barh,88px) + min(1.2vh,12px))}
+#inner{height:100%;display:flex;gap:min(2vw,26px)}
+@media (max-aspect-ratio:1/1){ #inner{flex-direction:column} }
+
+/* 그림 */
+.figwrap{flex:1 1 46%;min-width:0;display:flex;flex-direction:column;justify-content:center;gap:10px}
+.fig{background:#0a1425;border:2px solid var(--line);border-radius:20px;padding:min(1.6vh,16px);
+  display:flex;align-items:center;justify-content:center;min-height:0;flex:1 1 auto}
+.fig svg{width:100%;height:100%;max-height:100%;object-fit:contain;display:block}
+.figcap{text-align:center;color:var(--gold);font-size:clamp(13px,1.25vw,21px);font-weight:800;flex-shrink:0}
+
+/* 본문(빈칸) */
+.txtwrap{flex:1 1 54%;min-width:0;display:flex;flex-direction:column;gap:min(1.4vh,14px);overflow-y:auto}
+.pts{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:min(1.3vh,13px)}
+.pts li{font-size:clamp(15px,1.62vw,32px);line-height:1.62;background:var(--panel);
+  border:2px solid var(--line);border-left:6px solid var(--si);border-radius:14px;
+  padding:min(1.5vh,16px) min(1.4vw,20px);font-weight:700}
+.pts li.done{border-left-color:var(--good)}
+
+/* ★ 빈칸 */
+.bl{display:inline-block;min-width:2.4em;text-align:center;border-bottom:4px solid var(--gold);
+  color:transparent;font-weight:900;padding:0 .45em;margin:0 .12em;cursor:pointer;
+  background:rgba(255,209,102,.09);border-radius:6px 6px 0 0;transition:.18s;position:relative}
+.bl:before{content:"?";color:var(--gold);opacity:.62;font-weight:900}
+.bl.on{color:var(--gold);border-bottom-color:var(--good);background:rgba(55,214,143,.16);
+  animation:pop .34s cubic-bezier(.34,1.56,.64,1)}
+.bl.on:before{content:""}
+.bl.next{box-shadow:0 0 0 3px rgba(255,209,102,.42);animation:pulse 1.5s infinite}
+@keyframes pop{0%{transform:scale(.6)}100%{transform:scale(1)}}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 3px rgba(255,209,102,.42)}50%{box-shadow:0 0 0 7px rgba(255,209,102,.12)}}
+
+/* 발문 */
+.ask{background:#1b1509;border:2px solid #6b5417;border-left:6px solid var(--gold);border-radius:16px;
+  padding:min(1.7vh,18px) min(1.5vw,22px);font-size:clamp(15px,1.55vw,30px);line-height:1.5;
+  color:#f8ecc6;font-weight:800;flex-shrink:0}
+.ask.veil{opacity:0;pointer-events:none}
+
+/* 판서 캔버스 */
+#pad{position:fixed;inset:0;z-index:40;touch-action:none;display:none}
+#pad.on{display:block}
+
+/* ═══ 하단 툴바 ═══ */
+#bar{position:fixed;left:0;right:0;bottom:0;z-index:60;display:flex;align-items:center;gap:min(1vw,10px);
+  padding:min(1.3vh,12px) min(1.6vw,18px);background:rgba(8,15,30,.96);border-top:2px solid var(--line);
+  flex-wrap:wrap;justify-content:center}
+.bbtn{background:var(--panel2);border:2px solid var(--line);border-radius:13px;
+  padding:min(1.4vh,13px) min(1.5vw,20px);font-size:clamp(13px,1.25vw,20px);font-weight:900;white-space:nowrap}
+.bbtn:hover{border-color:var(--si)}
+.bbtn:active{transform:translateY(2px)}
+.bbtn.main{background:linear-gradient(135deg,#0ea5e9,#2563eb);border-color:transparent;min-width:min(24vw,290px)}
+.bbtn.gold{background:linear-gradient(135deg,#c98a06,#f0b429);border-color:transparent}
+.bbtn.on{border-color:var(--good);color:var(--good)}
+.bbtn:disabled{opacity:.34}
+.sw{width:clamp(26px,2.4vw,38px);height:clamp(26px,2.4vw,38px);border-radius:50%;border:3px solid #33456b;flex-shrink:0}
+.sw.on{border-color:#fff;transform:scale(1.14)}
+.sp{flex:1;min-width:6px}
+@media (max-width:900px){ .bbtn.main{min-width:150px} .bbtn{padding:10px 12px} }
+</style>
+</head>
+<body>
+
+<!-- ═══ 홈 ═══ -->
+<div id="menu">
+  <div class="mtop">
+    <h1>💼 성공적인 직업생활 · 수업자료</h1>
+    <p>전자칠판용 · 빈칸을 학생들과 함께 채우며 진행하세요</p>
+  </div>
+  <div class="ugrid" id="ugrid"></div>
+  <div class="mhelp">
+    <b>▶ 진행 방법</b> — 큰 버튼 <span class="key">빈칸 열기</span>를 누르면 빈칸이 <b>하나씩</b> 공개됩니다.
+    학생들에게 먼저 물어보고 → 답이 나오면 눌러서 확인하세요. 빈칸을 <b>직접 터치</b>해도 열립니다.<br>
+    <b>▶ 키보드 / 프레젠터 리모컨</b> —
+    <span class="key">Space</span><span class="key">→</span><span class="key">PageDown</span> 다음 빈칸·다음 장 ·
+    <span class="key">←</span> 이전 장 · <span class="key">A</span> 모두 열기 · <span class="key">P</span> 펜 · <span class="key">Esc</span> 목록<br>
+    <b>▶ 판서</b> — 아래 <b>✏️ 펜</b>을 켜면 화면에 바로 필기할 수 있습니다. 색을 골라 쓰고 <b>지우기</b>로 정리하세요.
+  </div>
+</div>
+
+<!-- ═══ 무대 ═══ -->
+<div id="stage" class="hidden">
+  <div id="head">
+    <span id="hUnit"></span>
+    <span id="hTitle"></span>
+    <span id="hIdx"></span>
+  </div>
+  <div id="content">
+    <div id="inner"></div>
+  </div>
+</div>
+<canvas id="pad"></canvas>
+
+<!-- ═══ 툴바 ═══ -->
+<div id="bar" class="hidden">
+  <button class="bbtn" id="bHome">🏠 목록</button>
+  <button class="bbtn" id="bPrev">◀ 이전</button>
+  <button class="bbtn main" id="bStep">빈칸 열기</button>
+  <button class="bbtn" id="bNext">다음 ▶</button>
+  <button class="bbtn gold" id="bAll">모두 열기</button>
+  <span class="sp"></span>
+  <button class="bbtn" id="bPen">✏️ 펜</button>
+  <button class="sw" id="sw1" style="background:#ff5f6d"></button>
+  <button class="sw" id="sw2" style="background:#ffd166"></button>
+  <button class="sw" id="sw3" style="background:#37d68f"></button>
+  <button class="sw" id="sw4" style="background:#ffffff"></button>
+  <button class="bbtn" id="bClear">🧹 지우기</button>
+</div>
+
+<script>
+"use strict";
+var $=function(id){return document.getElementById(id);};
+var UNITS=window.LESSON_UNITS||[], FIGS=window.FIGS||{};
+var ui=0, si=0, opened=0, SL=[];
+
+/* ─── 홈 ─── */
+function renderMenu(){
+  var h='';
+  UNITS.forEach(function(u,i){
+    var blanks=0;
+    u.slides.forEach(function(s){ s.pts.forEach(function(p){ blanks+=(p.match(/\{\{/g)||[]).length; }); });
+    h+='<button class="ucard" data-u="'+i+'">'+
+       '<span class="ic">'+u.icon+'</span><span class="m">'+
+       '<span class="no">단원 '+u.no+'</span>'+
+       '<span class="ti">'+u.title+'</span>'+
+       '<span class="cnt">슬라이드 '+u.slides.length+'장 · 빈칸 '+blanks+'개</span>'+
+       '</span></button>';
+  });
+  $('ugrid').innerHTML=h;
+  Array.prototype.forEach.call(document.querySelectorAll('.ucard'),function(b){
+    b.onclick=function(){ start(+b.dataset.u); };
+  });
+}
+function start(u){
+  ui=u; si=0; SL=UNITS[u].slides;
+  $('menu').classList.add('hidden');
+  $('stage').classList.remove('hidden');
+  $('bar').classList.remove('hidden');
+  render(); fitBar();
+}
+function home(){
+  $('stage').classList.add('hidden'); $('bar').classList.add('hidden');
+  $('menu').classList.remove('hidden'); penOff(); clearPad();
+}
+
+/* ─── 빈칸 렌더 ─── */
+function markup(text, base){
+  var n=base, out=text.replace(/\{\{(.+?)\}\}/g, function(_,a){
+    return '<span class="bl" data-i="'+(n++)+'">'+a+'</span>';
+  });
+  return {html:out, count:n-base};
+}
+function render(){
+  var s=SL[si], u=UNITS[ui];
+  opened=0;
+  $('hUnit').textContent='단원 '+u.no+' · '+u.title;
+  $('hTitle').textContent=s.t;
+  $('hIdx').textContent=(si+1)+' / '+SL.length;
+
+  var base=0, lis='';
+  s.pts.forEach(function(p){
+    var m=markup(p, base); base+=m.count;
+    lis+='<li>'+m.html+'</li>';
+  });
+  window.__total=base;
+
+  $('inner').innerHTML=
+    '<div class="figwrap">'+
+      '<div class="fig">'+(FIGS[s.fig]||'')+'</div>'+
+      (s.cap?'<div class="figcap">'+s.cap+'</div>':'')+
+    '</div>'+
+    '<div class="txtwrap">'+
+      '<ul class="pts">'+lis+'</ul>'+
+      (s.ask?'<div class="ask veil" id="askBox">💭 '+s.ask+'</div>':'')+
+    '</div>';
+
+  Array.prototype.forEach.call(document.querySelectorAll('.bl'),function(b){
+    b.onclick=function(){ reveal(+b.dataset.i); };
+  });
+  paint();
+}
+function paint(){
+  var bs=document.querySelectorAll('.bl');
+  Array.prototype.forEach.call(bs,function(b){
+    var i=+b.dataset.i;
+    b.classList.toggle('on', i<opened);
+    b.classList.toggle('next', i===opened);
+  });
+  Array.prototype.forEach.call(document.querySelectorAll('.pts li'),function(li){
+    var inner=li.querySelectorAll('.bl');
+    var all=inner.length>0 && Array.prototype.every.call(inner,function(x){return x.classList.contains('on');});
+    li.classList.toggle('done', all);
+  });
+  var tot=window.__total||0, done=opened>=tot;
+  if($('askBox')) $('askBox').classList.toggle('veil', !done);
+  var b=$('bStep');
+  if(tot===0){ b.textContent='다음 장 ▶'; }
+  else if(!done){ b.textContent='빈칸 열기  ('+opened+' / '+tot+')'; }
+  else { b.textContent = (si<SL.length-1) ? '✔ 다 채웠어요 · 다음 장 ▶' : '✔ 이 단원 끝!'; }
+  $('bPrev').disabled = (si===0);
+  $('bNext').disabled = (si>=SL.length-1);
+}
+function reveal(i){
+  if(i>=opened) opened=i+1;   // 건너뛰어 눌러도 거기까지 열림
+  paint();
+}
+function stepUp(){
+  var tot=window.__total||0;
+  if(opened<tot){ opened++; paint(); }
+  else if(si<SL.length-1){ go(1); }
+}
+function openAll(){ opened=window.__total||0; paint(); }
+function go(d){
+  var n=SL.length, t=si+d;
+  if(t<0) t=0; if(t>n-1) t=n-1;
+  if(t===si) return;
+  si=t; clearPad(); render();
+}
+
+/* ─── 판서 ─── */
+var pad=$('pad'), ctx=pad.getContext('2d'), drawing=false, penOn=false, color='#ff5f6d';
+function sizePad(){
+  var r=window.devicePixelRatio||1;
+  var w=innerWidth, h=innerHeight;
+  var img=null;
+  try{ if(pad.width) img=ctx.getImageData(0,0,pad.width,pad.height); }catch(e){}
+  pad.width=w*r; pad.height=h*r; pad.style.width=w+'px'; pad.style.height=h+'px';
+  ctx.setTransform(r,0,0,r,0,0);
+  ctx.lineCap='round'; ctx.lineJoin='round';
+  if(img){ try{ ctx.putImageData(img,0,0); }catch(e){} }
+}
+sizePad();
+addEventListener('resize',function(){ sizePad(); fitBar(); });
+function penTgl(){ penOn?penOff():penOnFn(); }
+function penOnFn(){ penOn=true; pad.classList.add('on'); $('bPen').classList.add('on'); }
+function penOff(){ penOn=false; pad.classList.remove('on'); $('bPen').classList.remove('on'); }
+function clearPad(){ ctx.clearRect(0,0,pad.width,pad.height); }
+function pos(e){
+  var t=e.touches?e.touches[0]:e;
+  return {x:t.clientX, y:t.clientY};
+}
+function dStart(e){
+  if(!penOn) return; e.preventDefault(); drawing=true;
+  var p=pos(e); ctx.beginPath(); ctx.moveTo(p.x,p.y);
+  ctx.strokeStyle=color; ctx.lineWidth=(color==='#ffffff')?5:6;
+}
+function dMove(e){
+  if(!penOn||!drawing) return; e.preventDefault();
+  var p=pos(e); ctx.lineTo(p.x,p.y); ctx.stroke();
+}
+function dEnd(){ drawing=false; }
+pad.addEventListener('pointerdown',dStart); pad.addEventListener('pointermove',dMove);
+addEventListener('pointerup',dEnd); addEventListener('pointercancel',dEnd);
+
+/* ─── 툴바 ─── */
+function fitBar(){
+  var h=$('bar').offsetHeight||88;
+  document.documentElement.style.setProperty('--barh', h+'px');
+}
+$('bHome').onclick=home;
+$('bPrev').onclick=function(){ go(-1); };
+$('bNext').onclick=function(){ go(1); };
+$('bStep').onclick=stepUp;
+$('bAll').onclick=openAll;
+$('bPen').onclick=penTgl;
+$('bClear').onclick=clearPad;
+[['sw1','#ff5f6d'],['sw2','#ffd166'],['sw3','#37d68f'],['sw4','#ffffff']].forEach(function(p){
+  $(p[0]).onclick=function(){
+    color=p[1];
+    Array.prototype.forEach.call(document.querySelectorAll('.sw'),function(s){s.classList.remove('on');});
+    $(p[0]).classList.add('on');
+    if(!penOn) penOnFn();
+  };
+});
+$('sw1').classList.add('on');
+
+/* ─── 키보드 / 프레젠터 리모컨 ─── */
+addEventListener('keydown',function(e){
+  if($('menu').classList.contains('hidden')===false) return;
+  var k=e.key;
+  if(k===' '||k==='ArrowRight'||k==='PageDown'){ e.preventDefault(); stepUp(); }
+  else if(k==='ArrowLeft'||k==='PageUp'){ e.preventDefault(); go(-1); }
+  else if(k==='ArrowDown'){ e.preventDefault(); go(1); }
+  else if(k==='a'||k==='A'||k==='ㅁ'){ openAll(); }
+  else if(k==='p'||k==='P'||k==='ㅔ'){ penTgl(); }
+  else if(k==='c'||k==='C'||k==='ㅊ'){ clearPad(); }
+  else if(k==='Escape'){ home(); }
+});
+
+renderMenu();
+fitBar();
+</script>
+</body>
+</html>

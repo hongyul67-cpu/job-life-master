@@ -275,7 +275,8 @@ function renderHome(){
 
   h+='<div class="foot">'+
      '<span class="tag">수업자료</span><span class="tag">개념게임</span><span class="tag">과제제출</span><br>'+
-     '<b>선생님께</b> — 결과 제출(과제)은 <b>?rc=선생님_주소</b> 링크로 열 때만 나타납니다. '+
+     '<b>선생님께</b> — 수업(전자칠판)용은 <a href="class.html" style="color:var(--am);font-weight:900">📽️ 수업자료 열기</a> · '+
+     '결과 제출(과제)은 <b>?rc=선생님_주소</b> 링크로 열 때만 나타납니다. '+
      (hasRC()?'현재 <b style="color:var(--gr)">제출 연결됨 ✓</b>':'지금은 연습 모드(제출 버튼 숨김).')+
      '<br><b>학생</b> — 배우기로 개념을 익히고, 테스트로 스스로 점검하세요. 오른쪽 아래에서 소리도 켤 수 있어요.'+
      '</div>';
