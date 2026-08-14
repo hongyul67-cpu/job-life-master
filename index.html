@@ -42,6 +42,34 @@ button{font-family:inherit}
 .hero .pct{font-size:13px;font-weight:900;color:var(--cy);min-width:38px;text-align:right}
 .hero .spark{position:absolute;right:-10px;top:-10px;font-size:90px;opacity:.08;transform:rotate(-12deg)}
 
+/* ── 랭크(계급) ── */
+.rank{display:flex;align-items:center;gap:14px;background:linear-gradient(135deg,#101d38,#0b1428);
+  border:1px solid var(--line);border-radius:18px;padding:14px 15px;margin-bottom:14px;position:relative;overflow:hidden}
+.rank .emb{flex-shrink:0;filter:drop-shadow(0 4px 12px rgba(0,0,0,.5))}
+.rank .m{flex:1;min-width:0}
+.rank .tn{font-size:20px;font-weight:900;letter-spacing:-.4px;line-height:1.15}
+.rank .rp{font-size:12.5px;color:var(--tx2);font-weight:800;margin-top:2px}
+.rank .rp b{color:var(--cy)}
+.rank .nx{margin-top:8px}
+.rank .nxbar{height:9px;background:#08142a;border:1px solid var(--line);border-radius:99px;overflow:hidden}
+.rank .nxbar>i{display:block;height:100%;width:0;border-radius:99px;transition:width .7s cubic-bezier(.2,.7,.3,1)}
+.rank .nxtx{font-size:11px;color:var(--tx3);font-weight:800;margin-top:4px}
+.rank .nxtx b{color:var(--am)}
+.rank .maxed{font-size:12px;color:var(--pu);font-weight:900;margin-top:6px}
+.tierline{display:flex;gap:3px;margin-top:9px}
+.tierline i{flex:1;height:5px;border-radius:99px;background:#1a2942}
+.tierline i.on{background:var(--cy)}
+
+/* 결과화면 RP */
+.rpgain{margin:14px 0 4px;background:#0a1730;border:1px solid var(--line2);border-radius:14px;padding:13px}
+.rpgain .g{font-size:26px;font-weight:900;color:var(--am);line-height:1}
+.rpgain .l{font-size:11.5px;color:var(--tx3);font-weight:800;margin-top:3px}
+.rpgain .brk{font-size:12px;color:var(--tx2);margin-top:8px;line-height:1.7}
+.rpgain .brk span{display:inline-block;margin:0 5px}
+.rpgain .newrec{display:inline-block;font-size:11px;font-weight:900;color:#062;background:var(--gr);
+  border-radius:99px;padding:2px 9px;margin-left:6px}
+.rpgain .norec{font-size:11.5px;color:var(--tx3);font-weight:700;margin-top:6px}
+
 /* ── 단원 카드 ── */
 .units{display:grid;gap:11px}
 .ucard{display:flex;align-items:center;gap:13px;background:var(--card);border:1px solid var(--line);
@@ -217,6 +245,52 @@ function load(k){ try{ return JSON.parse(localStorage.getItem(k)||"{}"); }catch(
 function save(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)); }catch(e){} }
 var learned=load(LS_LEARN);      // id → true (배우기 끝냄)
 var best=load(LS_BEST);          // id → {correct,total,stars}
+var LS_RP="jlm_rp_v1";
+var rp=load(LS_RP);              // id → 그 주제에서 얻은 '최고' RP (재시험해도 최고 기록만 쌓임)
+
+/* ══════════════ 랭크(계급) 시스템 ══════════════
+   RP = 주제별 최고 점수의 합.  같은 주제를 반복해도 최고 기록만 반영 → 무한 파밍 불가.
+   한 주제 만점 = 정답×10 + 별3 50 + 만점 50  (전 주제 완벽 시 약 2720점) */
+var TIERS=[
+  {n:"아이언",   min:0,    c:"#8d949e", c2:"#5a6069", ic:"🪨"},
+  {n:"브론즈",   min:200,  c:"#c9803f", c2:"#8a5427", ic:"🥉"},
+  {n:"실버",     min:480,  c:"#c3ccdc", c2:"#7e8899", ic:"🥈"},
+  {n:"골드",     min:800,  c:"#ffc93c", c2:"#b8860b", ic:"🥇"},
+  {n:"플래티넘", min:1180, c:"#4fd1c5", c2:"#1d7d75", ic:"💠"},
+  {n:"에메랄드", min:1600, c:"#34d399", c2:"#177852", ic:"💚"},
+  {n:"다이아",   min:2050, c:"#7cc6ff", c2:"#2b6ca3", ic:"💎"},
+  {n:"마스터",   min:2450, c:"#c084fc", c2:"#7127b8", ic:"👑"}
+];
+function totalRP(){
+  var s=0; for(var k in rp){ if(rp.hasOwnProperty(k)) s+=(rp[k]||0); } return s;
+}
+function tierOf(p){
+  var t=TIERS[0];
+  for(var i=0;i<TIERS.length;i++){ if(p>=TIERS[i].min) t=TIERS[i]; }
+  return t;
+}
+function nextTier(p){
+  for(var i=0;i<TIERS.length;i++){ if(p<TIERS[i].min) return TIERS[i]; }
+  return null;   // 마스터 도달
+}
+function calcRP(correct,total,stars){
+  return correct*10 + (stars===3?50:(stars===2?25:(stars===1?10:0))) + (correct===total?50:0);
+}
+function maxRPof(t){ return t.quiz.length*10 + 50 + 50; }
+var MAXRP=0;   // 전 주제 만점 시 총점 (안내문·밸런스 확인용)
+ALL_TOPICS.forEach(function(t){ MAXRP+=maxRPof(t); });
+/* 티어 엠블럼 (SVG) */
+function tierBadge(t,size){
+  var s=size||64;
+  return '<svg viewBox="0 0 100 100" width="'+s+'" height="'+s+'" style="display:block">'+
+    '<defs><linearGradient id="tg'+t.n+'" x1="0" y1="0" x2="0" y2="1">'+
+    '<stop offset="0" stop-color="'+t.c+'"/><stop offset="1" stop-color="'+t.c2+'"/></linearGradient></defs>'+
+    '<path d="M50 6 L88 24 V54 C88 74 70 88 50 95 C30 88 12 74 12 54 V24 Z" '+
+    'fill="url(#tg'+t.n+')" stroke="'+t.c+'" stroke-width="3" stroke-linejoin="round"/>'+
+    '<path d="M50 16 L78 29 V54 C78 68 65 79 50 85 C35 79 22 68 22 54 V29 Z" '+
+    'fill="rgba(0,0,0,.26)"/>'+
+    '<text x="50" y="62" font-size="34" text-anchor="middle">'+t.ic+'</text></svg>';
+}
 
 function hasRC(){ return !!(window.ResultCollector && ResultCollector.config && ResultCollector.config.endpoint); }
 
@@ -239,6 +313,31 @@ function goBack(){
   else renderHome();
 }
 
+/* ══════════════ 랭크 카드 ══════════════ */
+function rankCardHTML(){
+  var p=totalRP(), t=tierOf(p), nx=nextTier(p);
+  var solved=0; for(var k in rp){ if(rp.hasOwnProperty(k)) solved++; }
+  var h='<div class="rank">'+
+    '<span class="emb">'+tierBadge(t,68)+'</span>'+
+    '<span class="m">'+
+      '<span class="tn" style="color:'+t.c+'">'+t.n+'</span>'+
+      '<span class="rp"><b>'+p+'</b> RP · 주제 '+solved+' / '+ALL_TOPICS.length+' 도전</span>';
+  if(nx){
+    var span=nx.min-t.min, got=p-t.min;
+    var w=Math.max(2,Math.min(100,Math.round(got/span*100)));
+    h+='<span class="nx"><span class="nxbar"><i style="width:'+w+'%;background:linear-gradient(90deg,'+t.c+','+nx.c+')"></i></span>'+
+       '<span class="nxtx">다음 <b style="color:'+nx.c+'">'+nx.n+'</b> 까지 <b>'+(nx.min-p)+' RP</b></span></span>';
+  } else {
+    h+='<span class="maxed">👑 최고 티어 달성! 전 주제를 지배했습니다</span>';
+  }
+  // 티어 눈금
+  h+='<span class="tierline">';
+  TIERS.forEach(function(x){ h+='<i class="'+(p>=x.min?'on':'')+'" title="'+x.n+'" style="'+(p>=x.min?'background:'+x.c:'')+'"></i>'; });
+  h+='</span>';
+  h+='</span></div>';
+  return h;
+}
+
 /* ══════════════ 홈 ══════════════ */
 function topicProgress(u){
   var done=0; u.topics.forEach(function(t){ if(best[t.id]) done++; });
@@ -252,6 +351,7 @@ function renderHome(){
   var pct=Math.round(doneT/totT*100);
 
   var h='';
+  h+=rankCardHTML();
   h+='<div class="hero"><span class="spark">🚀</span>'+
      '<h2>직업 세계로 떠나는 준비</h2>'+
      '<p>단원을 골라 <b style="color:var(--cy)">📖 배우기</b>로 먼저 훑고, <b style="color:var(--cy)">🎯 테스트</b>로 확인해요.<br>처음이면 <b style="color:#cfe0ff">배우기부터</b> — 맞힐 필요 없이 넘기기만 하면 됩니다.</p>'+
@@ -279,9 +379,21 @@ function renderHome(){
      '결과 제출(과제)은 <b>?rc=선생님_주소</b> 링크로 열 때만 나타납니다. '+
      (hasRC()?'현재 <b style="color:var(--gr)">제출 연결됨 ✓</b>':'지금은 연습 모드(제출 버튼 숨김).')+
      '<br><b>학생</b> — 배우기로 개념을 익히고, 테스트로 스스로 점검하세요. 오른쪽 아래에서 소리도 켤 수 있어요.'+
+     '<br><b>🏅 랭크 규칙</b> — 테스트마다 <b>정답×10 + 별(최대 50) + 만점 50</b>점을 얻습니다. '+
+     '주제별 <b>최고 기록만</b> 합산되므로 같은 문제를 반복해도 점수가 부풀지 않습니다. '+
+     '못 딴 주제를 채우는 것이 가장 빠른 승급 길이에요. (전 주제 만점 = '+MAXRP+' RP · 마스터 '+TIERS[7].min+' RP)'+
+     '<br><span id="rkReset" style="color:var(--tx3);text-decoration:underline;cursor:pointer">랭크 기록 초기화</span> '+
+     '<span style="color:var(--tx3)">— 여러 명이 한 PC를 쓸 때 다음 학생 차례에 누르세요.</span>'+
      '</div>';
 
   document.getElementById("home").innerHTML=h;
+  var rk=document.getElementById("rkReset");
+  if(rk) rk.onclick=function(){
+    if(!confirm("랭크 점수와 시험 기록을 지웁니다.\n(배우기 완료 표시는 남습니다)\n\n지울까요?")) return;
+    rp={}; best={}; save(LS_RP,rp); save(LS_BEST,best);
+    if(window.FX) FX.reset();
+    renderHome();
+  };
   show("home");
 }
 
@@ -299,6 +411,10 @@ function renderUnit(key){
       var cls=b.stars>=3?'gold':'done';
       badges+='<span class="chip '+cls+'">'+ '★'.repeat(b.stars)+'☆'.repeat(3-b.stars)+' '+b.correct+'/'+b.total+'</span>';
     }
+    // 이 주제에서 딴 RP / 딸 수 있는 최대 RP → 어디를 더 채워야 할지 바로 보인다
+    var maxRP=maxRPof(t), got=rp[t.id]||0;
+    badges+='<span class="chip '+(got>=maxRP?'gold':'')+'" title="이 주제 랭크 점수">'+
+            (got>=maxRP?'👑 ':'⚡ ')+got+' / '+maxRP+' RP</span>';
     h+='<div class="trow"><div class="th">'+
        '<span class="tic">'+t.icon+'</span>'+
        '<span class="tt">'+t.title+'</span></div>'+
@@ -467,19 +583,41 @@ function finishTest(){
   if(!prev || correct>prev.correct || (correct===prev.correct && stars>prev.stars)){
     best[T.id]={correct:correct,total:total,stars:stars}; save(LS_BEST,best);
   }
-  renderResult(correct,total,stars,dur);
-  // 배너 연출
+
+  /* ── 랭크 점수(RP) ── 주제별 '최고 RP'만 반영해 반복 파밍을 막는다 ── */
+  var beforeRP=totalRP(), beforeTier=tierOf(beforeRP);
+  var earned=calcRP(correct,total,stars);
+  var prevRP=rp[T.id]||0;
+  var isRec=earned>prevRP;
+  if(isRec){ rp[T.id]=earned; save(LS_RP,rp); }
+  var afterRP=totalRP(), afterTier=tierOf(afterRP);
+  var rankedUp = afterTier.min>beforeTier.min;
+
+  renderResult(correct,total,stars,dur,{earned:earned,prev:prevRP,isRec:isRec,
+    gain:afterRP-beforeRP, totalRP:afterRP, tier:afterTier});
+
+  // 배너 연출 — 승급하면 승급 배너를 먼저 크게
   var pct=Math.round(correct/total*100);
   if(window.FX){
     setTimeout(function(){
-      FX.banner({icon: stars>=3?"🏆":(stars>=1?"🎉":"💪"),
-        title: stars>=3?"완벽해요!":(pct>=60?"통과!":"조금 더!"),
-        sub: T.t.title+" · "+correct+" / "+total+" 정답",
-        stars:stars, btn:"결과 확인 →"});
+      if(rankedUp){
+        FX.banner({icon:afterTier.ic, title:afterTier.n+" 승급!",
+          sub:"축하합니다 — <b style='color:"+afterTier.c+"'>"+beforeTier.n+" → "+afterTier.n+"</b><br>총 "+afterRP+" RP",
+          stars:false, btn:"확인 →", onClose:function(){
+            FX.banner({icon: stars>=3?"🏆":"🎉", title:"+"+(afterRP-beforeRP)+" RP",
+              sub:T.t.title+" · "+correct+" / "+total+" 정답", stars:stars, btn:"결과 확인 →"});
+          }});
+      } else {
+        FX.banner({icon: stars>=3?"🏆":(stars>=1?"🎉":"💪"),
+          title: stars>=3?"완벽해요!":(pct>=60?"통과!":"조금 더!"),
+          sub: T.t.title+" · "+correct+" / "+total+" 정답"+
+               (isRec?"<br><b style='color:#fbbf24'>+"+(afterRP-beforeRP)+" RP 획득!</b>":""),
+          stars:stars, btn:"결과 확인 →"});
+      }
     },520);
   }
 }
-function renderResult(correct,total,stars,dur){
+function renderResult(correct,total,stars,dur,R){
   var u=T.u, t=T.t, pct=Math.round(correct/total*100);
   stack=[renderHome, function(){renderUnit(u.key);}];
   setCrumb("🎯",t.title+" 결과",u.no+"단원");
@@ -489,6 +627,21 @@ function renderResult(correct,total,stars,dur){
     '<div class="stars">'+ '★'.repeat(stars)+'<span style="opacity:.25">'+'★'.repeat(3-stars)+'</span></div>'+
     '<div class="msg">'+msg+'</div>'+
     '<div class="detail">'+correct+' / '+total+' 정답 · '+dur+'초 소요</div>';
+
+  // ── 랭크 점수 ──
+  if(R){
+    var starB=(stars===3?50:(stars===2?25:(stars===1?10:0)));
+    h+='<div class="rpgain">'+
+       '<div class="g">+<span id="rpNum">0</span> RP'+(R.isRec?'<span class="newrec">신기록!</span>':'')+'</div>'+
+       '<div class="l">이번 판 점수</div>'+
+       '<div class="brk"><span>정답 '+correct+'×10 = <b style="color:var(--cy)">'+(correct*10)+'</b></span>'+
+       '<span>별 '+stars+'개 <b style="color:var(--am)">+'+starB+'</b></span>'+
+       (correct===total?'<span>만점 <b style="color:var(--gr)">+50</b></span>':'')+'</div>'+
+       (R.isRec
+         ? '<div class="norec" style="color:var(--gr)">이 주제 최고 기록 갱신 → 총 RP <b>+'+R.gain+'</b> (누적 '+R.totalRP+' RP · '+R.tier.n+')</div>'
+         : '<div class="norec">이 주제 최고 기록은 <b>'+R.prev+' RP</b> — 더 잘하면 그만큼 올라갑니다 (누적 '+R.totalRP+' RP · '+R.tier.n+')</div>')+
+       '</div>';
+  }
   // 문항 리뷰
   h+='<div class="rev">';
   T.qs.forEach(function(q,idx){
@@ -509,6 +662,11 @@ function renderResult(correct,total,stars,dur){
   show("result");
   if(window.FX) FX.countUp(document.getElementById("bigScore"),pct,900);
   else document.getElementById("bigScore").textContent=pct;
+  var rpEl=document.getElementById("rpNum");
+  if(rpEl && R){
+    if(window.FX) FX.countUp(rpEl,R.earned,1100);
+    else rpEl.textContent=R.earned;
+  }
 }
 function submitResult(correct,total,pct,dur){
   if(!hasRC()) return;
