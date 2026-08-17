@@ -230,6 +230,49 @@ details.more[open]>summary{border-bottom:1px dashed #33507f}
 <script src="https://hongyul67-cpu.github.io/links/fx.js"></script>
 <script src="https://hongyul67-cpu.github.io/links/collector.js"
         data-tool="성공적인 직업생활"></script>
+<script>
+/* ── 성공적인 직업생활 — 생기부 키워드 ──
+   · 이 도구는 자체 RP·계급 화면을 이미 가지고 있어 공용 rank.js 는 붙이지 않는다.
+   · 생기부: 제출할 때 활동명·도전횟수가 자동으로 얹혀 키워드·문장 초안이 만들어진다. */
+(function(){
+  var MODE_NAME = '성공적인 직업생활';
+  var TRY_KEY   = 'try_joblife';
+
+  function bumpTry(m){
+    var d={}; try{ d=JSON.parse(localStorage.getItem(TRY_KEY))||{}; }catch(e){}
+    d[m]=(d[m]||0)+1;
+    try{ localStorage.setItem(TRY_KEY, JSON.stringify(d)); }catch(e){}
+    return d[m];
+  }
+
+  window.RankKit = {
+    mode: MODE_NAME,
+    /* 채점이 끝난 지점에서 호출 — RP 정산 + 승급 연출 */
+    award: function(pct, mode){
+      /* 이 도구는 자체 RP·계급 체계를 쓰므로, 여기서는 활동명만 기억해 둔다 */
+      if(mode) window.RankKit.lastMode = mode;
+      return null;
+    }
+  };
+
+  /* 생기부 — 제출 payload 에 활동명·도전횟수를 자동으로 붙인다 */
+  var t=setInterval(function(){
+    if(!window.ResultCollector) return;
+    clearInterval(t);
+    if(ResultCollector.__kit) return;
+    ResultCollector.__kit=1;
+    var orig=ResultCollector.open;
+    ResultCollector.open=function(p){
+      p=p||{};
+      var m=p.mode||window.RankKit.lastMode||MODE_NAME;
+      p.mode=m;
+      if(p.retry===undefined) p.retry=bumpTry(m);
+
+      return orig.call(this,p);
+    };
+  }, 60);
+})();
+</script>
 <script src="data.js"></script>
 <script>
 "use strict";
@@ -671,6 +714,8 @@ function renderResult(correct,total,stars,dur,R){
 function submitResult(correct,total,pct,dur){
   if(!hasRC()) return;
   ResultCollector.open({
+    mode:'성공적인 직업생활 — '+T.t.title,   /* 생기부 활동명 */
+    tier:(function(){ try{ return tierOf(totalRP()).n; }catch(e){ return undefined; } })(),
     score:pct, correct:correct, total:total, wrong:T.wrong, durationSec:dur,
     labels:{score:"점수(100)", correct:"맞은개수", total:"총문항", rate:"정답률(%)", wrong:"틀린문항"}
   });
