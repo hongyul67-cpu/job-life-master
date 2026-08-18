@@ -187,6 +187,28 @@ details.more[open]>summary{border-bottom:1px dashed #33507f}
 .rbtns{display:flex;gap:9px;margin-top:16px;flex-wrap:wrap}
 .rbtns button{flex:1;min-width:130px;border:0;border-radius:13px;padding:13px;font-size:14.5px;font-weight:900;cursor:pointer}
 .rbtns .submit{background:linear-gradient(135deg,#059669,#10b981);color:#fff}
+/* ── 종합시험 · 오답노트 (규약 §2) ── */
+.examcard{display:block;width:100%;text-align:left;margin:12px 0 0;padding:16px 18px;cursor:pointer;
+  background:linear-gradient(135deg,#2a2140,#1b2140);border:1px solid #4a3d78;border-radius:16px;color:var(--tx)}
+.examcard:hover{border-color:var(--am)}
+.examcard .t{font-size:16px;font-weight:900;display:flex;align-items:center;gap:8px}
+.examcard .d{font-size:12.5px;color:var(--tx3);margin-top:5px;line-height:1.55;font-weight:700}
+.examrule{background:#2a2135;border:1px solid #574372;border-radius:13px;padding:13px 15px;
+  font-size:13px;line-height:1.65;color:#e6dcff;margin:12px 0}
+.wnote{margin:16px 0 4px;text-align:left}
+.wnote h4{margin:0 0 10px;font-size:14.5px}
+.wnq{background:#0a1730;border:1px solid var(--line2);border-radius:13px;padding:13px 15px;margin-bottom:10px}
+.wnq .n{font-size:12px;font-weight:800;color:var(--tx3);margin-bottom:5px}
+.wnq .qq{font-weight:800;font-size:14.5px;line-height:1.55;color:var(--tx)}
+.wnl{border-radius:9px;padding:8px 10px;font-size:13.2px;margin-top:6px;line-height:1.5;color:var(--tx2)}
+.wnl b{color:var(--tx)}
+.wnl.bad{background:rgba(239,68,68,.10);border:1px solid rgba(239,68,68,.45)}
+.wnl.bad b{color:var(--rd)}
+.wnl.good{background:rgba(34,197,94,.10);border:1px solid rgba(34,197,94,.45)}
+.wnl.good b{color:var(--gr)}
+.wnw{margin-top:8px;font-size:13.2px;line-height:1.6;color:var(--tx2);
+  background:rgba(56,132,255,.08);border:1px solid rgba(56,132,255,.28);border-radius:9px;padding:8px 10px}
+.wnall{border:1px dashed var(--line2);border-radius:13px;padding:18px;text-align:center;font-weight:800}
 .rbtns .retry{background:var(--card2);color:var(--tx2);border:1px solid var(--line)!important}
 .rbtns .home{background:linear-gradient(135deg,#0ea5e9,#2563eb);color:#fff}
 
@@ -402,6 +424,12 @@ function renderHome(){
      '<div style="font-size:11.5px;color:var(--tx3);margin-top:6px;font-weight:700">전체 '+totT+'개 주제 중 <b style="color:var(--gr)">'+doneT+'개</b> 테스트 완료</div>'+
      '</div>';
 
+  // 종합시험 — 전 단원에서 20문항 (규약 §2)
+  h+='<button class="examcard" onclick="startExam()">'+
+     '<div class="t">🧪 종합시험 (20문항)</div>'+
+     '<div class="d">6개 단원 전체에서 20문항. 푸는 동안에는 정답·해설을 알려주지 않고, '+
+     '끝나면 <b>오답노트</b>와 함께 채점해 줍니다.</div></button>';
+
   h+='<div class="units">';
   UNITS.forEach(function(u){
     var p=topicProgress(u);
@@ -419,8 +447,8 @@ function renderHome(){
   h+='<div class="foot">'+
      '<span class="tag">수업자료</span><span class="tag">개념게임</span><span class="tag">과제제출</span><br>'+
      '<b>선생님께</b> — 수업(전자칠판)용은 <a href="class.html" style="color:var(--am);font-weight:900">📽️ 수업자료 열기</a> · '+
-     '결과 제출(과제)은 <b>?rc=선생님_주소</b> 링크로 열 때만 나타납니다. '+
-     (hasRC()?'현재 <b style="color:var(--gr)">제출 연결됨 ✓</b>':'지금은 연습 모드(제출 버튼 숨김).')+
+     '결과 제출(과제)은 <b>?rc=선생님_주소</b> 링크로 열어야 실제로 보내집니다. '+
+     (hasRC()?'현재 <b style="color:var(--gr)">제출 연결됨 ✓</b>':'지금은 연습 모드 — 제출 버튼은 보이지만 누르면 안내만 나옵니다.')+
      '<br><b>학생</b> — 배우기로 개념을 익히고, 테스트로 스스로 점검하세요. 오른쪽 아래에서 소리도 켤 수 있어요.'+
      '<br><b>🏅 랭크 규칙</b> — 테스트마다 <b>정답×10 + 별(최대 50) + 만점 50</b>점을 얻습니다. '+
      '주제별 <b>최고 기록만</b> 합산되므로 같은 문제를 반복해도 점수가 부풀지 않습니다. '+
@@ -540,6 +568,45 @@ function finishLearn(){
   startTest(s.id);
 }
 
+/* ══════════════ 종합시험 (규약 §2) ══════════════
+   · 전 단원 20문항 · 푸는 동안 정답·해설·점수 감춤 · 끝난 뒤 오답노트 → 그 아래 제출 */
+var EXAM_N=20;
+function shuffleArr(a){ a=a.slice();
+  for(var i=a.length-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)); var t=a[i];a[i]=a[j];a[j]=t; }
+  return a; }
+/* 주제를 돌아가며 뽑아 한 단원에 쏠리지 않게 한다 */
+function pickExamQs(n){
+  var buckets=ALL_TOPICS.map(function(t){
+    return shuffleArr(t.quiz).map(function(q){ return {q:q, topic:t}; });
+  });
+  buckets=shuffleArr(buckets);
+  var out=[];
+  for(var round=0; out.length<n; round++){
+    var added=0;
+    for(var b=0;b<buckets.length && out.length<n;b++){
+      if(buckets[b].length>round){ out.push(buckets[b][round]); added++; }
+    }
+    if(!added) break;
+  }
+  return shuffleArr(out).map(function(it){
+    var q=it.q;
+    var idx=shuffleArr(q.opts.map(function(_,i){return i;}));
+    return { q:q.q, why:q.why, opts:idx.map(function(i){return q.opts[i];}),
+             a:idx.indexOf(q.a), topic:it.topic.title };
+  });
+}
+function startExam(){
+  var qs=pickExamQs(EXAM_N);
+  if(!qs.length){ alert('출제할 문항이 없습니다.'); return; }
+  stack=[renderHome];
+  setCrumb("🧪","종합시험","전 단원 "+qs.length+"문항 · 채점은 마지막에");
+  T={ id:'__exam', t:{title:'종합시험'}, u:{key:null,no:'',title:'전 단원'},
+      qs:qs, i:0, correct:0, miss:0, wrong:[], picks:[], answered:false,
+      t0:Date.now(), exam:true };
+  if(window.FX) FX.reset();
+  renderQ();
+}
+
 /* ══════════════ 테스트 ══════════════ */
 var T=null;
 function startTest(id){
@@ -552,7 +619,8 @@ function startTest(id){
     for(var i=idx.length-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)); var tmp=idx[i];idx[i]=idx[j];idx[j]=tmp; }
     return { q:q.q, why:q.why, opts:idx.map(function(i){return q.opts[i];}), a:idx.indexOf(q.a) };
   });
-  T={ id:id, t:t, u:u, qs:qs, i:0, correct:0, miss:0, wrong:[], answered:false, t0:Date.now() };
+  T={ id:id, t:t, u:u, qs:qs, i:0, correct:0, miss:0, wrong:[], picks:[], answered:false,
+      t0:Date.now(), exam:false };
   if(window.FX) FX.reset();
   renderQ();
 }
@@ -579,8 +647,10 @@ function renderQ(){
   var q=T.qs[T.i];
   T.answered=false;
   var h='';
-  h+='<div class="hud-wrap"><div id="hud"></div></div>';
+  if(!T.exam) h+='<div class="hud-wrap"><div id="hud"></div></div>';   // 시험 중 점수 감춤
   h+='<div class="climb"><div class="lab"><span>진행</span><span>'+(T.i)+' / '+T.qs.length+' 통과</span></div>'+climbSVG(T.i,T.qs.length)+'</div>';
+  if(T.exam) h+='<div class="examrule">🧪 <b>종합시험</b> — 보기를 누르면 바로 다음 문제로 넘어갑니다. '+
+     '정답·해설은 <b>끝까지 푼 뒤</b> 오답노트에서 확인해요.</div>';
   h+='<div class="q-card"><div class="q-no">Q'+(T.i+1)+' / '+T.qs.length+'</div>'+
      '<div class="q-txt">'+q.q+'</div><div class="opts" id="opts">';
   var K=["A","B","C","D","E"];
@@ -591,12 +661,20 @@ function renderQ(){
      '<div class="next-row"><button class="pg-btn primary hidden" id="nextBtn" onclick="nextQ()">'+
      (T.i===T.qs.length-1?'결과 보기 →':'다음 문제 →')+'</button></div></div>';
   document.getElementById("test").innerHTML=h;
-  if(window.FX) FX.hud(document.getElementById("hud"));
+  if(window.FX && !T.exam) FX.hud(document.getElementById("hud"));
   show("test");
 }
 function answer(i){
-  if(T.answered) return; T.answered=true;
+  if(!T || T.done || T.answered) return;   // 채점이 끝난 화면의 보기를 다시 눌러도 반응하지 않게
   var q=T.qs[T.i];
+  T.picks[T.i]=i;
+  if(T.exam){
+    // 시험: 정답·해설·효과음 없이 바로 다음 문제로 (채점은 마지막에)
+    if(i===q.a) T.correct++; else { T.miss++; T.wrong.push(T.i+1); }
+    nextQ();
+    return;
+  }
+  T.answered=true;
   var btns=document.querySelectorAll("#opts .opt");
   btns.forEach(function(b){ b.setAttribute("disabled","1");
     var bi=+b.dataset.i;
@@ -618,6 +696,8 @@ function nextQ(){
   else finishTest();
 }
 function finishTest(){
+  if(T.done) return;
+  T.done=true;
   var total=T.qs.length, correct=T.correct;
   var stars = window.FX ? FX.starsFor(T.miss) : (T.miss===0?3:(T.miss<=2?2:(T.miss<=5?1:0)));
   var dur=Math.round((Date.now()-T.t0)/1000);
@@ -662,8 +742,9 @@ function finishTest(){
 }
 function renderResult(correct,total,stars,dur,R){
   var u=T.u, t=T.t, pct=Math.round(correct/total*100);
-  stack=[renderHome, function(){renderUnit(u.key);}];
-  setCrumb("🎯",t.title+" 결과",u.no+"단원");
+  stack = T.exam ? [renderHome] : [renderHome, function(){renderUnit(u.key);}];
+  if(T.exam) setCrumb("🧪","종합시험 결과","전 단원 "+total+"문항");
+  else setCrumb("🎯",t.title+" 결과",u.no+"단원");
   var msg = stars>=3?"완벽합니다. 이 주제는 마스터했어요!":(pct>=60?"잘했어요. 틀린 것만 다시 보면 완벽!":"괜찮아요. 배우기로 한 번 더 훑어봐요.");
   var h='<div class="result">'+
     '<div class="big" id="bigScore">0</div><div class="lab">점 (100점 만점)</div>'+
@@ -685,24 +766,18 @@ function renderResult(correct,total,stars,dur,R){
          : '<div class="norec">이 주제 최고 기록은 <b>'+R.prev+' RP</b> — 더 잘하면 그만큼 올라갑니다 (누적 '+R.totalRP+' RP · '+R.tier.n+')</div>')+
        '</div>';
   }
-  // 문항 리뷰
-  h+='<div class="rev">';
-  T.qs.forEach(function(q,idx){
-    var wrongThis=T.wrong.indexOf(idx+1)>=0;
-    h+='<div class="ri '+(wrongThis?'no':'ok')+'"><div class="q">'+(wrongThis?'✗':'✓')+' Q'+(idx+1)+'. '+q.q.replace(/<[^>]+>/g,'')+'</div>'+
-       (wrongThis?'<div class="a">→ 정답: '+["A","B","C","D","E"][q.a]+') '+q.opts[q.a]+'</div>':'')+'</div>';
-  });
-  h+='</div>';
-  // 버튼
+  // 문항 리뷰 — 시험이면 규약대로 오답노트(번호·주제·지문·내가 고른 답·정답·해설)
+  h += T.exam ? wrongNoteHTML() : reviewHTML();
+  // 버튼 — 제출은 오답노트 아래, ?rc= 링크가 아니어도 항상 보인다 (규약 §1 ③)
   h+='<div class="rbtns">';
-  if(hasRC()){
-    h+='<button class="submit" onclick="submitResult('+correct+','+total+','+pct+','+dur+')">📤 선생님께 과제 제출</button>';
-  }
-  h+='<button class="retry" onclick="startTest(\''+T.id+'\')">↻ 다시 풀기</button>';
-  h+='<button class="home" onclick="renderUnit(\''+u.key+'\')">단원으로</button>';
-  h+='</div></div>';
+  h+='<button class="retry" onclick="'+(T.exam?'startExam()':"startTest('"+T.id+"')")+'">↻ 다시 풀기</button>';
+  h+='<button class="home" onclick="'+(T.exam?'renderHome()':"renderUnit('"+u.key+"')")+'">'+(T.exam?'홈으로':'단원으로')+'</button>';
+  h+='</div>';
+  h+='<div id="rcAnchor"></div>';
+  h+='</div>';
   document.getElementById("result").innerHTML=h;
   show("result");
+  mountSubmit(correct,total,pct,dur);   // 오답노트 아래에 제출 버튼
   if(window.FX) FX.countUp(document.getElementById("bigScore"),pct,900);
   else document.getElementById("bigScore").textContent=pct;
   var rpEl=document.getElementById("rpNum");
@@ -711,14 +786,89 @@ function renderResult(correct,total,stars,dur,R){
     else rpEl.textContent=R.earned;
   }
 }
-function submitResult(correct,total,pct,dur){
-  if(!hasRC()) return;
-  ResultCollector.open({
-    mode:'성공적인 직업생활 — '+T.t.title,   /* 생기부 활동명 */
-    tier:(function(){ try{ return tierOf(totalRP()).n; }catch(e){ return undefined; } })(),
-    score:pct, correct:correct, total:total, wrong:T.wrong, durationSec:dur,
-    labels:{score:"점수(100)", correct:"맞은개수", total:"총문항", rate:"정답률(%)", wrong:"틀린문항"}
+/* 주제 테스트 — 풀면서 이미 정답·해설을 봤으므로 한 줄 요약 */
+function reviewHTML(){
+  var h='<div class="rev">', K=["A","B","C","D","E"];
+  T.qs.forEach(function(q,idx){
+    var no=T.wrong.indexOf(idx+1)>=0;
+    h+='<div class="ri '+(no?'no':'ok')+'"><div class="q">'+(no?'\u2717':'\u2713')+' Q'+(idx+1)+'. '+q.q.replace(/<[^>]+>/g,'')+'</div>'+
+       (no?'<div class="a">\u2192 \uc815\ub2f5: '+K[q.a]+') '+q.opts[q.a]+'</div>':'')+'</div>';
   });
+  return h+'</div>';
+}
+
+/* 종합시험 오답노트 — 규약 §2 : 번호 · 주제 · 지문 · 내가 고른 답 · 정답 · 해설 */
+function examWrongItems(){
+  var out=[];
+  T.qs.forEach(function(q,idx){
+    var pick=T.picks[idx];
+    if(pick===q.a) return;
+    out.push({no:idx+1, topic:q.topic||'', q:q.q, why:q.why||'',
+              pickIdx:pick, pick:(pick==null?null:q.opts[pick]),
+              ansIdx:q.a, ans:q.opts[q.a]});
+  });
+  return out;
+}
+function wrongNoteHTML(){
+  var K=["A","B","C","D","E"], items=examWrongItems();
+  if(!items.length)
+    return '<div class="wnote"><div class="wnall">\uD83C\uDFAF '+T.qs.length+'\ubb38\ud56d \uc804\ubd80 \ub9de\ud614\uc5b4\uc694! \uc624\ub2f5\uc774 \uc5c6\uc2b5\ub2c8\ub2e4.</div></div>';
+  var h='<div class="wnote"><h4>\uD83D\uDCD5 \uc624\ub2f5\ub178\ud2b8 \u2014 \ud2c0\ub9b0 '+items.length+'\ubb38\ud56d</h4>';
+  items.forEach(function(w){
+    h+='<div class="wnq"><div class="n">'+w.no+'\ubc88'+(w.topic?' \u00b7 '+w.topic:'')+'</div>'+
+       '<div class="qq">'+w.q+'</div>'+
+       '<div class="wnl bad">\u2717 \ub0b4\uac00 \uace0\ub978 \ub2f5 &nbsp;<b>'+
+         (w.pick==null?'(\ubb34\uc751\ub2f5)':K[w.pickIdx]+') '+w.pick)+'</b></div>'+
+       '<div class="wnl good">\u2713 \uc815\ub2f5 &nbsp;<b>'+K[w.ansIdx]+') '+w.ans+'</b></div>'+
+       (w.why?'<div class="wnw">'+w.why+'</div>':'')+'</div>';
+  });
+  return h+'</div>';
+}
+
+/* ── 결과 제출 (파트별) — 규약 §1 ── */
+function shortTxt(t,len){
+  t=String(t==null?'':t).replace(/<[^>]*>/g,'').replace(/\s+/g,' ').trim();
+  return t.length>len ? t.slice(0,len-1)+'\u2026' : t;
+}
+/* "3번 취업 준비 · 이력서→자기소개서" 처럼 무엇을 틀렸는지 남긴다 */
+function wrongDescs(){
+  if(T.exam) return examWrongItems().map(function(w){
+    return w.no+'\ubc88 '+(w.topic?w.topic+' \u00b7 ':'')+
+           (w.pick==null?'(\ubb34\uc751\ub2f5)':shortTxt(w.pick,16))+'\u2192'+shortTxt(w.ans,16);
+  });
+  var out=[];
+  T.qs.forEach(function(q,idx){
+    var pick=T.picks[idx];
+    if(pick===undefined || pick===q.a) return;
+    out.push((idx+1)+'\ubc88 '+shortTxt(q.opts[pick],16)+'\u2192'+shortTxt(q.opts[q.a],16));
+  });
+  return out;
+}
+function submitMode(){
+  return T.exam ? '\uc131\uacf5\uc801\uc778 \uc9c1\uc5c5\uc0dd\ud65c \u2014 \uc885\ud569\uc2dc\ud5d8'
+                : (T.t.title||'\uc131\uacf5\uc801\uc778 \uc9c1\uc5c5\uc0dd\ud65c')+' \u2014 \uc8fc\uc81c \ud14c\uc2a4\ud2b8';
+}
+/* 오답노트 아래(앵커 뒤)에 붙인다. ?rc= 링크가 아니어도 버튼은 보인다. */
+function mountSubmit(correct,total,pct,dur){
+  var anchor=document.getElementById('rcAnchor');
+  if(!anchor || !window.ResultCollector || !ResultCollector.attach) return;
+  var payload={ mode:submitMode(), score:pct, correct:correct, total:total,
+    wrong:wrongDescs(), durationSec:dur,
+    /* 계급 — 이 도구는 자체 랭크(RP)를 쓰므로 여기서 직접 넣는다 (다른 세션 작업 유지).
+       attach 는 window.Rank 가 있을 때만 채우는데 이 도구는 그것을 싣지 않는다. */
+    tier:(function(){ try{ return tierOf(totalRP()).n; }catch(e){ return undefined; } })(),
+    labels:{score:"\uc810\uc218(100)", correct:"\ub9de\uc740\uac1c\uc218", total:"\ucd1d\ubb38\ud56d",
+            rate:"\uc815\ub2f5\ub960(%)", wrong:"\ud2c0\ub9b0 \ubb38\uc81c"} };
+  var btn=ResultCollector.attach(anchor, function(){ return payload; }, {
+    id:'rcBtn', className:'submit', mode:payload.mode,
+    extra:[ T.exam ? '\uc804 \ub2e8\uc6d0 \uc885\ud569 \ud3c9\uac00 \uc751\uc2dc'
+                   : (T.t.title||'')+' \ud559\uc2b5 \ub0b4\uc6a9 \ud655\uc778' ]
+  });
+  if(btn){
+    btn.style.width='100%';
+    btn.style.marginTop='10px';
+    btn.textContent='\uD83D\uDCE4 ['+(T.exam?'\uc885\ud569\uc2dc\ud5d8':(T.t.title||'\ud14c\uc2a4\ud2b8'))+'] \uacb0\uacfc \uc81c\ucd9c';
+  }
 }
 
 /* 시작 */
