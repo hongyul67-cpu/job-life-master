@@ -62,11 +62,11 @@ button{font-family:inherit;cursor:pointer;border:none;color:inherit}
 .figcap{text-align:center;color:var(--gold);font-size:calc(clamp(14px,1.45vw,30px) * var(--k));font-weight:800;flex-shrink:0}
 
 /* 본문(빈칸) */
-.txtwrap{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:min(1.4vh,14px);overflow-y:auto}
-.pts{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:min(1.3vh,13px)}
+.txtwrap{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:calc(min(1.4vh,14px) * var(--k));overflow-y:auto}
+.pts{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:calc(min(1.3vh,13px) * var(--k))}
 .pts li{font-size:calc(clamp(17px,2.02vw,46px) * var(--k));line-height:1.6;background:var(--panel);
   border:2px solid var(--line);border-left:6px solid var(--si);border-radius:14px;
-  padding:min(1.5vh,16px) min(1.4vw,20px);font-weight:700}
+  padding:calc(min(1.5vh,16px) * var(--k)) min(1.4vw,20px);font-weight:700}
 .pts li.done{border-left-color:var(--good)}
 
 /* ★ 빈칸 */
@@ -83,7 +83,7 @@ button{font-family:inherit;cursor:pointer;border:none;color:inherit}
 
 /* 발문 */
 .ask{background:#1b1509;border:2px solid #6b5417;border-left:6px solid var(--gold);border-radius:16px;
-  padding:min(1.7vh,18px) min(1.5vw,22px);font-size:calc(clamp(16px,1.85vw,42px) * var(--k));line-height:1.48;
+  padding:calc(min(1.7vh,18px) * var(--k)) min(1.5vw,22px);font-size:calc(clamp(16px,1.85vw,42px) * var(--k));line-height:1.48;
   color:#f8ecc6;font-weight:800;flex-shrink:0}
 .ask.veil{opacity:0;pointer-events:none}
 
@@ -192,7 +192,7 @@ function start(u){
   $('menu').classList.add('hidden');
   $('stage').classList.remove('hidden');
   $('bar').classList.remove('hidden');
-  render(); fitBar();
+  fitBar(); render();      // 툴바 높이를 먼저 확정해야 autofit 이 정확히 계산된다
 }
 function home(){
   $('stage').classList.add('hidden'); $('bar').classList.add('hidden');
@@ -239,17 +239,28 @@ function render(){
 
 /* 글씨를 키우면 글이 길어진다 → 그림 폭을 줄여 한 화면에 담는다.
    (수업 중 스크롤이 생기면 안 되므로) */
-var FIGSTEPS=[46,40,34,28,23,19], figIdx=0;
+var FIGSTEPS=[46,40,34,28,23,19], figIdx=0, fitK=1;
+function fits(tw){ void tw.offsetHeight; return tw.scrollHeight - tw.clientHeight <= 2; }
+/* 어떤 슬라이드를 새로 추가하더라도 글자가 잘리거나 툴바에 가리지 않도록,
+   ① 그림 폭을 줄이고 ② 그래도 넘치면 글씨를 조금씩 줄여 '반드시' 한 화면에 맞춘다. */
 function autofit(reset){
   var root=document.documentElement, tw=document.querySelector('.txtwrap');
   if(!tw) return;
-  if(reset) figIdx=0;                 // 새 슬라이드에서만 그림을 원래 크기로 되돌린다
+  if(reset){ figIdx=0; fitK=1; setK(); }
   for(; figIdx<FIGSTEPS.length; figIdx++){
     root.style.setProperty('--figw', FIGSTEPS[figIdx]+'%');
-    void tw.offsetHeight;             // 리플로우 강제 후 측정
-    if(tw.scrollHeight - tw.clientHeight <= 2) return;
+    if(fits(tw)) return;
   }
-  figIdx=FIGSTEPS.length-1;           // 끝까지 줄여도 넘치면 마지막 값 유지(스크롤 허용)
+  figIdx=FIGSTEPS.length-1;
+  // 그림을 최소로 줄여도 넘치면 글씨를 5%씩 낮춘다 (최대 45%까지 — 글이 잘리는 것보다 낫다)
+  while(fitK > 0.55){
+    fitK = Math.round((fitK-0.05)*100)/100;
+    setK();
+    if(fits(tw)) return;
+  }
+}
+function setK(){
+  document.documentElement.style.setProperty('--k', (K*fitK).toFixed(3));
 }
 function paint(fromRender){
   var bs=document.querySelectorAll('.bl');
@@ -327,9 +338,14 @@ pad.addEventListener('pointerdown',dStart); pad.addEventListener('pointermove',d
 addEventListener('pointerup',dEnd); addEventListener('pointercancel',dEnd);
 
 /* ─── 툴바 ─── */
+var lastBarH=0;
 function fitBar(){
   var h=$('bar').offsetHeight||88;
+  if(h===lastBarH) return;
+  lastBarH=h;
   document.documentElement.style.setProperty('--barh', h+'px');
+  // 툴바가 여러 줄로 접히면 본문 높이가 줄어든다 → 다시 맞춰야 글이 안 잘린다
+  if(document.querySelector('.txtwrap')) autofit(true);
 }
 /* ─── 글씨 크기 (전자칠판마다 다르므로 현장에서 조절 · 저장됨) ─── */
 /* 상한은 화면 높이가 정한다 — 낮은 화면에서 무리하게 키우면 글이 잘리기 때문.
@@ -345,7 +361,7 @@ try{ var sv=parseFloat(localStorage.getItem('jlm_class_k')); if(sv>=0.8&&sv<=1.3
 function applyK(){
   var mx=maxK();
   if(K>mx) K=mx;                       // 화면이 바뀌면(창 크기·다른 칠판) 상한에 맞춰 낮춘다
-  document.documentElement.style.setProperty('--k', K.toFixed(2));
+  fitK=1; setK();
   $('bZoom').textContent = Math.round(K*100)+'%';
   $('bPlus').disabled = (K>=mx);
   $('bMinus').disabled = (K<=0.8);
