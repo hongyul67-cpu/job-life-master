@@ -256,6 +256,16 @@ details.more[open]>summary{border-bottom:1px dashed #33507f}
   <section id="test" class="hidden"></section>
   <!-- 결과 -->
   <section id="result" class="hidden"></section>
+
+  <!-- 수업 슬라이드 (예전 class.html) -->
+  <section id="board" class="hidden">
+    <p style="color:var(--dim);font-size:13.5px;margin:0 0 14px">
+      전자칠판·프로젝터로 앞에서 끌고 가는 화면입니다.
+      요점의 <b>빈칸을 눌러</b> 답을 드러내고, <b>발문</b>으로 이어 가세요.
+      (넘기기: <kbd>←</kbd> <kbd>→</kbd> 키 또는 화면 아래 버튼)
+    </p>
+    <div id="boardHome"></div>
+  </section>
 </div>
 
 <!-- 공용 연출 · 결과 제출 위젯 -->
@@ -306,6 +316,17 @@ details.more[open]>summary{border-bottom:1px dashed #33507f}
 })();
 </script>
 <script src="data.js"></script>
+<style>
+/* 수업 슬라이드의 도해 높이 제한 — 이 저장소에만 두는 규칙.
+   board.js 는 사진(<img>)만 38vh 로 묶고 직접 그린 SVG 는 안 묶는다.
+   이 도구의 도해 몇 개(특히 ncs10)는 세로가 길어 혼자 화면을 다 먹어서,
+   사진과 같은 기준으로 맞춰 준다. 이렇게 하면 교실 화면(1920×1080)에서
+   슬라이드 30장이 전부 스크롤 없이 한 화면에 담긴다.
+   ※ 공용 board.js 는 건드리지 않는다(다른 도구의 도해까지 작아지므로). */
+.bd-figsvg svg{max-height:38vh;width:100%;height:auto;display:block;margin:0 auto}
+</style>
+<script src="lesson.js"></script>
+<script src="board.js"></script>
 <script>
 "use strict";
 /* ══════════════ 상태 ══════════════ */
@@ -372,7 +393,7 @@ function hasRC(){ return !!(window.ResultCollector && ResultCollector.config && 
 /* ══════════════ 라우팅 ══════════════ */
 var stack=[];    // 뒤로가기용
 function show(id){
-  ["home","unit","learn","test","result"].forEach(function(s){
+  ["home","unit","learn","test","result","board"].forEach(function(s){
     document.getElementById(s).classList.toggle("hidden", s!==id);
   });
   document.getElementById("backBtn").classList.toggle("hidden", id==="home");
@@ -386,6 +407,22 @@ function setCrumb(logo,title,sub){
 function goBack(){
   if(stack.length){ var f=stack.pop(); f(); }
   else renderHome();
+}
+
+/* ══════════════ 수업 슬라이드 ══════════════
+   예전에는 class.html 이 따로 있었지만, 겉으로 보이는 입구를 index 하나로
+   모으면서 이 안으로 들어왔다. 원고는 lesson.js, 화면은 board.js(공용)가 맡는다. */
+var boardReady=false;
+function openBoard(){
+  stack.push(renderHome);
+  setCrumb("📽️","수업 슬라이드","전자칠판·프로젝터용 — 선생님이 앞에서 끌고 가는 화면");
+  show("board");
+  if(boardReady) return;
+  var el=document.getElementById("boardHome");
+  if(!window.Board){ el.innerHTML='<p style="color:var(--dim)">수업자료를 불러오지 못했습니다.</p>'; return; }
+  Board.home(el,{units:window.LESSON_DECK,
+    hint:'교과 6단원 · 슬라이드 27장. 요점의 <b>빈칸</b>을 눌러 학생들과 함께 답을 채우세요.'});
+  boardReady=true;
 }
 
 /* ══════════════ 랭크 카드 ══════════════ */
@@ -456,7 +493,7 @@ function renderHome(){
 
   h+='<div class="foot">'+
      '<span class="tag">수업자료</span><span class="tag">개념게임</span><span class="tag">과제제출</span><br>'+
-     '<b>선생님께</b> — 수업(전자칠판)용은 <a href="class.html" style="color:var(--am);font-weight:900">📽️ 수업자료 열기</a> · '+
+     '<b>선생님께</b> — 수업(전자칠판)용은 <button type="button" onclick="openBoard()" style="background:none;border:0;padding:0;color:var(--am);font-weight:900;font-size:inherit;font-family:inherit;cursor:pointer;text-decoration:underline">📽️ 수업자료 열기</button> · '+
      '결과 제출(과제)은 <b>?rc=선생님_주소</b> 링크로 열어야 실제로 보내집니다. '+
      (hasRC()?'현재 <b style="color:var(--gr)">제출 연결됨 ✓</b>':'지금은 연습 모드 — 제출 버튼은 보이지만 누르면 안내만 나옵니다.')+
      '<br><b>학생</b> — 배우기로 개념을 익히고, 테스트로 스스로 점검하세요. 오른쪽 아래에서 소리도 켤 수 있어요.'+
