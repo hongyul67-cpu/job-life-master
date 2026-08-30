@@ -373,8 +373,11 @@ function calcRP(correct,total,stars){
   return correct*10 + (stars===3?50:(stars===2?25:(stars===1?10:0))) + (correct===total?50:0);
 }
 function maxRPof(t){ return t.quiz.length*10 + 50 + 50; }
-var MAXRP=0;   // 전 주제 만점 시 총점 (안내문·밸런스 확인용)
+var MAXRP=0;   // 18개 주제 만점 시 총점 (안내문·밸런스 확인용)
 ALL_TOPICS.forEach(function(t){ MAXRP+=maxRPof(t); });
+/* 종합시험 점수도 같은 통에 쌓이므로(키 "__exam") 안내 숫자에 함께 넣는다.
+   EXAM_N 은 아래에서 정해지므로 값이 필요한 때 계산한다 */
+function maxRPall(){ return MAXRP + (EXAM_N*10 + 50 + 50); }
 /* 티어 엠블럼 (SVG) */
 function tierBadge(t,size){
   var s=size||64;
@@ -420,15 +423,20 @@ function openBoard(){
   if(boardReady) return;
   var el=document.getElementById("boardHome");
   if(!window.Board){ el.innerHTML='<p style="color:var(--dim)">수업자료를 불러오지 못했습니다.</p>'; return; }
+  /* 장수는 덱에서 세어 쓴다 — 손으로 적어 두면 슬라이드를 늘렸을 때 숫자가 어긋난다 */
+  var nSlide=(window.LESSON||[]).length, nUnit=(window.LESSON_DECK||[]).length;
   Board.home(el,{units:window.LESSON_DECK,
-    hint:'교과 6단원 · 슬라이드 27장. 요점의 <b>빈칸</b>을 눌러 학생들과 함께 답을 채우세요.'});
+    hint:'교과 '+nUnit+'단원 · 슬라이드 '+nSlide+'장. 요점의 <b>빈칸</b>을 눌러 학생들과 함께 답을 채우세요.'});
   boardReady=true;
 }
 
 /* ══════════════ 랭크 카드 ══════════════ */
 function rankCardHTML(){
   var p=totalRP(), t=tierOf(p), nx=nextTier(p);
-  var solved=0; for(var k in rp){ if(rp.hasOwnProperty(k)) solved++; }
+  /* '주제 N / 18' 은 진짜 주제만 센다 — 종합시험(__exam)까지 세면
+     주제를 하나도 안 풀고 시험만 봐도 '주제 1 / 18' 로 나온다 */
+  var solved=0;
+  ALL_TOPICS.forEach(function(t){ if(rp[t.id]) solved++; });
   var h='<div class="rank">'+
     '<span class="emb">'+tierBadge(t,68)+'</span>'+
     '<span class="m">'+
@@ -499,7 +507,7 @@ function renderHome(){
      '<br><b>학생</b> — 배우기로 개념을 익히고, 테스트로 스스로 점검하세요. 오른쪽 아래에서 소리도 켤 수 있어요.'+
      '<br><b>🏅 랭크 규칙</b> — 테스트마다 <b>정답×10 + 별(최대 50) + 만점 50</b>점을 얻습니다. '+
      '주제별 <b>최고 기록만</b> 합산되므로 같은 문제를 반복해도 점수가 부풀지 않습니다. '+
-     '못 딴 주제를 채우는 것이 가장 빠른 승급 길이에요. (전 주제 만점 = '+MAXRP+' RP · 마스터 '+TIERS[7].min+' RP)'+
+     '못 딴 주제를 채우는 것이 가장 빠른 승급 길이에요. (18개 주제 + 종합시험 만점 = '+maxRPall()+' RP · 마스터 '+TIERS[7].min+' RP)'+
      '<br><span id="rkReset" style="color:var(--tx3);text-decoration:underline;cursor:pointer">랭크 기록 초기화</span> '+
      '<span style="color:var(--tx3)">— 여러 명이 한 PC를 쓸 때 다음 학생 차례에 누르세요.</span>'+
      '</div>';
