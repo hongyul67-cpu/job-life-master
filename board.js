@@ -79,6 +79,10 @@
     '  font-weight:800;user-select:none}',
     '.bd-bl:focus{outline:2px solid #7fc4ff;outline-offset:1px}',
     '.bd-bl.on{background:rgba(127,196,255,.16);color:#9fe0ff;border-bottom-color:#9fe0ff;cursor:default}',
+    /* 도해 안에 정답 낱말이 그대로 쓰여 있으면 빈칸이 무의미해진다.
+       같은 낱말을 그림에서도 가려 두었다가 빈칸을 열 때 함께 드러낸다. */
+    '.bd-svgbl{opacity:0;transition:opacity .18s}',
+    '.bd-svgbl.on{opacity:1}',
     '.bd-ask{background:rgba(255,209,102,.12);border:1px solid #ffd166;border-radius:11px;',
     '  padding:13px 15px;margin-bottom:14px;font-size:clamp(14px,2vw,17px)}',
     '.bd-ask b{color:#ffd166}',
@@ -178,7 +182,7 @@
     layer.addEventListener('click', function (e) {
       /* 빈칸을 누르면 그 답만 드러난다. 슬라이드는 넘어가지 않는다. */
       var bl = e.target.closest && e.target.closest('.bd-bl');
-      if (bl) { bl.classList.add('on'); return; }
+      if (bl) { bl.classList.add('on'); revealAns(bl.textContent.trim()); return; }
       var b = e.target.closest('[data-bd]');
       if (!b) return;                       /* 빈 곳을 눌러도 넘어가지 않는다 */
       var a = b.dataset.bd;
@@ -193,7 +197,7 @@
       /* 빈칸에 초점이 있으면 Enter·스페이스는 그 빈칸을 여는 데 쓴다
          (안 그러면 스페이스가 슬라이드 넘기기로 먹혀 빈칸을 못 연다) */
       var bl = e.target && e.target.closest && e.target.closest('.bd-bl');
-      if (bl && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); bl.classList.add('on'); return; }
+      if (bl && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); bl.classList.add('on'); revealAns(bl.textContent.trim()); return; }
       if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); next(); }
       else if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); prev(); }
       else if (e.key === 'Escape') { close(); }
@@ -276,6 +280,74 @@
     if (document.fullscreenElement) document.exitFullscreen().catch(function () {});
   }
 
+  /* 이 슬라이드의 {{답}} 목록 */
+  function answersOf(s) {
+    var out = [];
+    (s.pts || []).forEach(function (p) {
+      var m = String(p).match(/\{\{([\s\S]+?)\}\}/g) || [];
+      m.forEach(function (x) {
+        var a = x.slice(2, -2).replace(/<[^>]*>/g, '').trim();
+        if (a) out.push(a);
+      });
+    });
+    return out;
+  }
+  /* 낱말이 시작되는 자리인지.
+     앞이 한글이면 딴 낱말의 꼬리("바람직한"의 '직')이므로 아니다.
+     뒤는 조사가 붙는 일이 많아("이윤을", "작업은") 한글이어도 그대로 본다. */
+  function standalone(str, at) {
+    var a = at > 0 ? str.charAt(at - 1) : '';
+    return !/[가-힣]/.test(a);
+  }
+  /* 도해(svg) 안에 정답 낱말이 그대로 쓰여 있으면 그 낱말만 빈칸처럼 가린다.
+     낱말이 설명글 속에 섞여 있을 수 있어 <tspan> 으로 그 부분만 떼어 낸다
+     (opacity 로만 감추므로 글자 자리는 그대로 — 그림이 흔들리지 않는다). */
+  function maskFigure(s) {
+    var ans = answersOf(s).filter(function (a) { return a && a.length >= 2; });
+    if (!ans.length) return;
+    var box = elIn.querySelector('.bd-figsvg');
+    if (box) maskIn(box.querySelectorAll('text'), 'http://www.w3.org/2000/svg', ans);
+    /* 제목·그림 설명에도 정답이 그대로 적혀 있는 일이 있다 (예: "무한책임과 유한책임의 차이") */
+    maskIn(elIn.querySelectorAll('.bd-h, .bd-cap'), null, ans);
+  }
+  function maskIn(nodes, NS, ans) {
+    Array.prototype.forEach.call(nodes, function (t) {
+      if (t.children.length) return;                  /* 이미 tspan 등이 들어 있으면 건드리지 않는다 */
+      var v = t.textContent || '';
+      /* 한 줄에 정답이 여럿 있을 수 있다 ("무형성 · 이질성 · 비분리성 · 소멸성") — 전부 찾는다 */
+      var hits = [];
+      ans.forEach(function (a) {
+        var k = v.indexOf(a);
+        while (k >= 0) {
+          if (standalone(v, k)) hits.push({ at: k, len: a.length, a: a });
+          k = v.indexOf(a, k + 1);
+        }
+      });
+      if (!hits.length) return;
+      hits.sort(function (x, y) { return x.at - y.at || y.len - x.len; });
+      var pos = 0, frag = document.createDocumentFragment();
+      hits.forEach(function (h) {
+        if (h.at < pos) return;                       /* 앞 조각과 겹치면 건너뛴다 */
+        if (h.at > pos) frag.appendChild(document.createTextNode(v.slice(pos, h.at)));
+        var sp = NS ? document.createElementNS(NS, 'tspan') : document.createElement('span');
+        sp.setAttribute('class', 'bd-svgbl');
+        sp.setAttribute('data-ans', h.a);
+        sp.textContent = h.a;
+        frag.appendChild(sp);
+        pos = h.at + h.len;
+      });
+      if (pos < v.length) frag.appendChild(document.createTextNode(v.slice(pos)));
+      t.textContent = '';
+      t.appendChild(frag);
+    });
+  }
+  function revealAns(a) {
+    if (!a) return;
+    Array.prototype.forEach.call(elIn.querySelectorAll('.bd-svgbl'), function (t) {
+      if (t.getAttribute('data-ans') === a) t.classList.add('on');
+    });
+  }
+
   function render() {
     var s = DECK[S.list[S.i]];
     if (!s) return;
@@ -306,6 +378,7 @@
     }
 
     elIn.innerHTML = h;
+    maskFigure(s);                 /* 도해에 적힌 정답 낱말도 빈칸과 함께 가린다 */
     /* 요점이 여러 줄이라 퀴즈·정답을 열면 새로 열린 칸이 화면 아래로 밀린다.
        그때마다 맨 위로 되돌리면 선생님이 매번 손으로 내려야 한다 —
        장이 바뀔 때만 위로 올리고, 단계를 열 때는 새로 열린 칸을 화면에 들여 놓는다. */
